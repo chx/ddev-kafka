@@ -90,7 +90,7 @@ func addHostname(node ast.Node, hostname string) error {
         additionalHostnames = ast.Sequence(token.New("", "", &token.Position{}), false)
         newMappingValue := ast.MappingValue(
             token.New("", "", &token.Position{}),
-            ast.String(token.New("additional_hostnames", "additional_hostnames", &token.Position{})),
+            ast.String(token.New("additional_hostnames", "additional_hostnames", &token.Position{Column: 1})),
             additionalHostnames,
         )
 
