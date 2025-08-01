@@ -77,7 +77,7 @@ func addHostname(node ast.Node, hostname string) error {
         if mappingValue.Key == nil || mappingValue.Value == nil {
             continue
         }
-        
+
         if keyNode, ok := mappingValue.Key.(*ast.StringNode); ok && keyNode.Value == "additional_hostnames" {
             if seqNode, ok := mappingValue.Value.(*ast.SequenceNode); ok {
                 additionalHostnames = seqNode
@@ -97,16 +97,14 @@ func addHostname(node ast.Node, hostname string) error {
                 Value: "additional_hostnames",
             },
         }
-        
+
         newSeqNode := &ast.SequenceNode{
             BaseNode: &ast.BaseNode{
                 Comment: &ast.CommentGroupNode{},
             },
             Values: []ast.Node{},
-            Start:  &token.Token{Type: token.SequenceStartType, Value: "["},
-            End:    &token.Token{Type: token.SequenceEndType, Value: "]"},
         }
-        
+
         newMappingValue := &ast.MappingValueNode{
             BaseNode: &ast.BaseNode{
                 Comment: &ast.CommentGroupNode{},
@@ -114,7 +112,7 @@ func addHostname(node ast.Node, hostname string) error {
             Key:   newKeyNode,
             Value: newSeqNode,
         }
-        
+
         mapping.Values = append(mapping.Values, newMappingValue)
         additionalHostnames = newSeqNode
     }
