@@ -9,5 +9,5 @@ global_files:
   - commands/host/kafka
 post_install_actions:
    - ./kafka_post_install.sh
-   - rm ./kafka_post_install.sh
-   - rm -r kafka-go
+   - rm -f ./kafka_post_install.sh
+   - rm -rf kafka-go

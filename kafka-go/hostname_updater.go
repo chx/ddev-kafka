@@ -1,3 +1,4 @@
+// #ddev-generated
 package main
 
 import (
@@ -18,7 +19,7 @@ func main() {
 
 func run() error {
     newHostname := strings.TrimSpace(os.Args[1])
-    
+
     yamlFile := "config.yaml"
     data, err := os.ReadFile(yamlFile)
     if err != nil {

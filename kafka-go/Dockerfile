@@ -1,9 +1,10 @@
+#ddev-generated
+
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 COPY *.go go.mod .
 RUN go mod tidy
-#RUN go get yaml-hostname-updater
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o yaml-hostname-updater .
 
 FROM alpine:latest
