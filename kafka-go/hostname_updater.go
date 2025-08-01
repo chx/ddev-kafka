@@ -107,6 +107,8 @@ func addHostname(node ast.Node, hostname string) error {
     }
 
     newHostnameNode := ast.String(token.New(hostname, hostname, &token.Position{}))
+    additionalHostnames.IsFlowStyle = false
+    additionalHostnames.AddColumn(3)
     additionalHostnames.Values = append(additionalHostnames.Values, newHostnameNode)
 
     return nil
