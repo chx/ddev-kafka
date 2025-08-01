@@ -1,0 +1,17 @@
+#ddev-generated
+http:
+  routers:
+    kafka-ui:
+      entrypoints:
+        - http-443
+      rule: Host(`HOST_REPLACE_THIS`)
+      service: NAME_REPLACE_THIS-kafka-ui-8080
+      ruleSyntax: v3
+      tls: true
+      priority: 1000
+
+  services:
+    NAME_REPLACE_THIS-kafka-ui-8080:
+      loadbalancer:
+        servers:
+          - url: http://ddev-NAME_REPLACE_THIS-kafka-ui:8080

@@ -1,16 +1,97 @@
 #ddev-generated
-# Simple template to demonstrate kafka
+
 services:
-  kafka:
-    container_name: ddev-${DDEV_SITENAME}-kafka
-    image: ${KAFKA_DOCKER_IMAGE:-busybox:stable}
-    command: tail -f /dev/null
-    restart: "no"
-    # These labels ensure this service is discoverable by DDEV.
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: ddev-${DDEV_SITENAME}-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+      KAFKA_OPTS: "-Dzookeeper.4lw.commands.whitelist=*"
+    hostname: zookeeper
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
     labels:
       com.ddev.site-name: ${DDEV_SITENAME}
       com.ddev.approot: ${DDEV_APPROOT}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'ruok' | nc localhost 2181 | grep imok"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: ddev-${DDEV_SITENAME}-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka -Dcom.sun.management.jmxremote.rmi.port=9101
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
     volumes:
-      - ".:/mnt/ddev_config"
-      - "ddev-global-cache:/mnt/ddev-global-cache"
+      - kafka-data:/var/lib/kafka/data
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:29092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.1
+    container_name: ddev-${DDEV_SITENAME}-kafka-ui
+    hostname: kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      KAFKA_CLUSTERS_0_READONLY: "false"
+      KAFKA_CLUSTERS_0_JMXPORT: 9101
+      AUTH_TYPE: "DISABLED"
+      MANAGEMENT_HEALTH_LDAP_ENABLED: "false"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    labels:
+      com.ddev.site-name: "${DDEV_SITENAME}"
+      com.ddev.approot: "${DDEV_APPROOT}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  zookeeper-data:
+    name: ddev-${DDEV_SITENAME}-zookeeper-data
+  zookeeper-logs:
+    name: ddev-${DDEV_SITENAME}-zookeeper-logs
+  kafka-data:
+    name: ddev-${DDEV_SITENAME}-kafka-data

@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+
+## #ddev-generated: If you want to edit and own this file, remove this line.
+## Description: Kafka management commands
+## Usage: kafka [command] [options]
+## Example: "ddev kafka topics --list" or "ddev kafka produce --topic my-topic"
+
+KAFKA_CONTAINER="ddev-${DDEV_SITENAME}-kafka"
+KAFKA_BROKER="kafka:29092"
+
+
+help() {
+    cat << HELP
+Kafka Management Commands:
+
+Topics:
+  ddev kafka topics --list                           List all topics
+  ddev kafka topics --create --topic TOPIC          Create a topic
+  ddev kafka topics --delete --topic TOPIC          Delete a topic
+  ddev kafka topics --describe --topic TOPIC        Describe a topic
+  ddev kafka topics --alter --topic TOPIC [opts]    Alter topic configuration
+
+Producers/Consumers:
+  ddev kafka produce --topic TOPIC                  Start interactive producer
+  ddev kafka consume --topic TOPIC                  Start consumer from beginning
+  ddev kafka consume --topic TOPIC --from-latest    Start consumer from latest
+
+Consumer Groups:
+  ddev kafka groups --list                          List consumer groups
+  ddev kafka groups --describe --group GROUP        Describe consumer group
+
+Configuration:
+  ddev kafka configs --describe --topic TOPIC       Show topic configuration
+  ddev kafka configs --describe --broker 1          Show broker configuration
+
+Utility:
+  ddev kafka shell                                   Open Kafka container shell
+  ddev kafka logs [--follow]                        Show Kafka logs
+  ddev kafka status                                  Check Kafka cluster status
+  ddev kafka ui                                      Get Kafka UI URL
+
+Examples:
+  ddev kafka topics --create --topic events --partitions 3 --replication-factor 1
+  ddev kafka produce --topic events
+  ddev kafka consume --topic events --group my-group
+HELP
+}
+check_kafka() {
+    if ! docker ps --format "table {{.Names}}" | grep -q "^${KAFKA_CONTAINER}$"; then
+        echo "Error: Kafka container is not running. Make sure the addon is installed and containers are started."
+        exit 1
+    fi
+}
+
+kafka_exec() {
+    docker exec -it "${KAFKA_CONTAINER}" kafka-"$@"
+}
+
+check_kafka() {
+    if ! docker ps --format "table {{.Names}}" | grep -q "^${KAFKA_CONTAINER}$"; then
+        echo "Error: Kafka container is not running. Make sure the addon is installed and containers are started."
+        exit 1
+    fi
+}
+
+case "${1:-help}" in
+    "topics")
+        check_kafka
+        shift
+        case "${1}" in
+            "--list")
+                kafka_exec topics --bootstrap-server "${KAFKA_BROKER}" --list
+                ;;
+            "--create")
+                shift
+                if [[ "$1" == "--topic" && -n "$2" ]]; then
+                    TOPIC="$2"
+                    shift 2
+                    PARTITIONS=1
+                    REPLICATION_FACTOR=1
+                    
+                    while [[ $# -gt 0 ]]; do
+                        case $1 in
+                            --partitions)
+                                PARTITIONS="$2"
+                                shift 2
+                                ;;
+                            --replication-factor)
+                                REPLICATION_FACTOR="$2"
+                                shift 2
+                                ;;
+                            *)
+                                echo "Unknown option: $1"
+                                exit 1
+                                ;;
+                        esac
+                    done
+                    
+                    kafka_exec topics --bootstrap-server "${KAFKA_BROKER}" --create --topic "${TOPIC}" --partitions "${PARTITIONS}" --replication-factor "${REPLICATION_FACTOR}"
+                else
+                    echo "Usage: ddev kafka topics --create --topic TOPIC_NAME [--partitions N] [--replication-factor N]"
+                    exit 1
+                fi
+                ;;
+            "--delete")
+                if [[ "$2" == "--topic" && -n "$3" ]]; then
+                    kafka_exec topics --bootstrap-server "${KAFKA_BROKER}" --delete --topic "$3"
+                else
+                    echo "Usage: ddev kafka topics --delete --topic TOPIC_NAME"
+                    exit 1
+                fi
+                ;;
+            "--describe")
+                if [[ "$2" == "--topic" && -n "$3" ]]; then
+                    kafka_exec topics --bootstrap-server "${KAFKA_BROKER}" --describe --topic "$3"
+                else
+                    kafka_exec topics --bootstrap-server "${KAFKA_BROKER}" --describe
+                fi
+                ;;
+            *)
+                echo "Available topic commands: --list, --create, --delete, --describe"
+                exit 1
+                ;;
+        esac
+        ;;
+    
+    "produce")
+        check_kafka
+        if [[ "$2" == "--topic" && -n "$3" ]]; then
+            echo "Starting producer for topic '$3'. Type messages and press Enter. Use Ctrl+C to exit."
+            kafka_exec console-producer --bootstrap-server "${KAFKA_BROKER}" --topic "$3"
+        else
+            echo "Usage: ddev kafka produce --topic TOPIC_NAME"
+            exit 1
+        fi
+        ;;
+    
+    "consume")
+        check_kafka
+        if [[ "$2" == "--topic" && -n "$3" ]]; then
+            TOPIC="$3"
+            shift 3
+            CONSUME_ARGS=""
+            
+            while [[ $# -gt 0 ]]; do
+                case $1 in
+                    --from-latest)
+                        shift
+                        ;;
+                    --group)
+                        CONSUME_ARGS="${CONSUME_ARGS} --group $2"
+                        shift 2
+                        ;;
+                    *)
+                        echo "Unknown option: $1"
+                        exit 1
+                        ;;
+                esac
+            done
+            
+            if [[ "$*" != *"--from-latest"* ]]; then
+                CONSUME_ARGS="${CONSUME_ARGS} --from-beginning"
+            fi
+            
+            echo "Starting consumer for topic '${TOPIC}'. Use Ctrl+C to exit."
+            kafka_exec console-consumer --bootstrap-server "${KAFKA_BROKER}" --topic "${TOPIC}" ${CONSUME_ARGS}
+        else
+            echo "Usage: ddev kafka consume --topic TOPIC_NAME [--group GROUP_NAME] [--from-latest]"
+            exit 1
+        fi
+        ;;
+    
+    "groups")
+        check_kafka
+        shift
+        case "${1}" in
+            "--list")
+                kafka_exec consumer-groups --bootstrap-server "${KAFKA_BROKER}" --list
+                ;;
+            "--describe")
+                if [[ "$2" == "--group" && -n "$3" ]]; then
+                    kafka_exec consumer-groups --bootstrap-server "${KAFKA_BROKER}" --describe --group "$3"
+                else
+                    echo "Usage: ddev kafka groups --describe --group GROUP_NAME"
+                    exit 1
+                fi
+                ;;
+            *)
+                echo "Available group commands: --list, --describe"
+                exit 1
+                ;;
+        esac
+        ;;
+    
+    "configs")
+        check_kafka
+        shift
+        kafka_exec configs --bootstrap-server "${KAFKA_BROKER}" "$@"
+        ;;
+    
+    "shell")
+        check_kafka
+        echo "Opening Kafka container shell..."
+        docker exec -it "${KAFKA_CONTAINER}" /bin/bash
+        ;;
+    
+    "logs")
+        if [[ "$2" == "--follow" ]]; then
+            docker logs -f "${KAFKA_CONTAINER}"
+        else
+            docker logs "${KAFKA_CONTAINER}"
+        fi
+        ;;
+    
+    "status")
+        check_kafka
+        echo "Checking Kafka cluster status..."
+        kafka_exec broker-api-versions --bootstrap-server "${KAFKA_BROKER}"
+        ;;
+    
+    "ui")
+        UI_URL=$(ddev describe -j | jq -r '.raw.services[] | select(.name=="kafka-ui") | .http_url')
+        if [[ -n "$UI_URL" && "$UI_URL" != "null" ]]; then
+            echo "Kafka UI is available at: ${UI_URL}"
+        else
+            echo "Kafka UI URL not found. Make sure the containers are running."
+        fi
+        ;;
+    
+    "help"|"--help"|"-h")
+        help
+        ;;
+    
+    *)
+        echo "Unknown command: $1"
+        echo "Use 'ddev kafka help' for available commands."
+        exit 1
+        ;;
+esac
+
