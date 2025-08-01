@@ -10,7 +10,7 @@ HOST="kafka-ui.$NAME.$TLD"
 cd kafka-go
 docker build -t kafka-hostname-updater .
 cp ../config.yaml .
-docker run --rm -v $(pwd):/data/ kafka-hostname-updater "kafka-ui.$NAME"
+docker run --rm -v $(pwd):/data -u $(id -u):$(id -g) kafka-hostname-updater "kafka-ui.$NAME"
 docker rmi kafka-hostname-updater
 cp config.yaml ..
 cd ..
