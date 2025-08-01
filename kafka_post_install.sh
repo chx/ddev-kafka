@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ## #ddev-generated
 set -euo pipefail
 
 NAME=$(ddev debug configyaml | grep '^name:' | cut -d' ' -f2)
 TLD=$(ddev debug configyaml | grep '^project_tld:' | cut -d' ' -f2)
-TLD=${TLD:-ddev.site} 
+TLD=${TLD:-ddev.site}
 HOST="kafka-ui.$NAME.$TLD"
 
 cd kafka-go

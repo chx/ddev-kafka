@@ -1,7 +1,5 @@
 name: ddev-kafka
-description: "Apache Kafka addon for DDEV with Zookeeper and Kafka UI"
-repository: https://github.com/chx/ddev-kafka
-install_directory_name: kafka
+ddev_version_constraint: '>= v1.24.3'
 project_files:
   - docker-compose.kafka.yaml
   - kafka_post_install.sh
