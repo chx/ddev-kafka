@@ -61,7 +61,7 @@ func addHostname(node ast.Node, hostname string) error {
     if !ok {
         return fmt.Errorf("expected top-level YAML document")
     }
-    
+
     if doc.Body == nil {
         return fmt.Errorf("document body is nil")
     }
@@ -72,7 +72,7 @@ func addHostname(node ast.Node, hostname string) error {
     }
 
     var additionalHostnames *ast.SequenceNode
-    
+
     for _, mappingValue := range mapping.Values {
         if mappingValue.Key == nil || mappingValue.Value == nil {
             continue
@@ -87,34 +87,14 @@ func addHostname(node ast.Node, hostname string) error {
     }
 
     if additionalHostnames == nil {
-        newKeyNode := &ast.StringNode{
-            BaseNode: &ast.BaseNode{
-                Comment: &ast.CommentGroupNode{},
-            },
-            Value: "additional_hostnames",
-            Token: &token.Token{
-                Type:  token.StringType,
-                Value: "additional_hostnames",
-            },
-        }
-
-        newSeqNode := &ast.SequenceNode{
-            BaseNode: &ast.BaseNode{
-                Comment: &ast.CommentGroupNode{},
-            },
-            Values: []ast.Node{},
-        }
-
-        newMappingValue := &ast.MappingValueNode{
-            BaseNode: &ast.BaseNode{
-                Comment: &ast.CommentGroupNode{},
-            },
-            Key:   newKeyNode,
-            Value: newSeqNode,
-        }
+        additionalHostnames = ast.Sequence(token.New("", "", &token.Position{}), false)
+        newMappingValue := ast.MappingValue(
+            token.New("", "", &token.Position{}),
+            ast.String(token.New("additional_hostnames", "additional_hostnames", &token.Position{})),
+            additionalHostnames,
+        )
 
         mapping.Values = append(mapping.Values, newMappingValue)
-        additionalHostnames = newSeqNode
     }
 
     for _, elem := range additionalHostnames.Values {
@@ -126,17 +106,8 @@ func addHostname(node ast.Node, hostname string) error {
         }
     }
 
-    newHostnameNode := &ast.StringNode{
-        BaseNode: &ast.BaseNode{
-            Comment: &ast.CommentGroupNode{},
-        },
-        Value: hostname,
-        Token: &token.Token{
-            Type:  token.StringType,
-            Value: hostname,
-        },
-    }
-    
+    newHostnameNode := ast.String(token.New(hostname, hostname, &token.Position{}))
     additionalHostnames.Values = append(additionalHostnames.Values, newHostnameNode)
+
     return nil
 }
