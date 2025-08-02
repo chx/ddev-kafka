@@ -22,6 +22,7 @@ After installation, make sure to commit the `.ddev` directory to version control
 
 | Command | Description |
 | ------- | ----------- |
+| `ddev kafka` | kafka helper |
 | `ddev describe` | View service status and used ports for Apache Kafka |
 | `ddev logs -s zookeper` | Check Zookeeper logs |
 | `ddev logs -s kafka` | Check Kafka logs |
