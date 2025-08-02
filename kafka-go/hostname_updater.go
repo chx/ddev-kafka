@@ -73,13 +73,9 @@ func addHostname(node ast.Node, hostname string) error {
 
     var additionalHostnames *ast.SequenceNode
 
-    for _, mappingValue := range mapping.Values {
-        if mappingValue.Key == nil || mappingValue.Value == nil {
-            continue
-        }
-
-        if keyNode, ok := mappingValue.Key.(*ast.StringNode); ok && keyNode.Value == "additional_hostnames" {
-            if seqNode, ok := mappingValue.Value.(*ast.SequenceNode); ok {
+    for iter := mapping.MapRange(); iter.Next(); {
+        if keyNode, ok := iter.Key().(*ast.StringNode); ok && keyNode.Value == "additional_hostnames" {
+            if seqNode, ok := iter.Value().(*ast.SequenceNode); ok {
                 additionalHostnames = seqNode
                 break
             }
